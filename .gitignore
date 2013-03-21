@@ -1,0 +1,17 @@
+*~
+*.tmp
+*.diff
+*.patch
+*.swp
+*.exe
+*.manifest.exe
+*.dll
+*.o
+*.obj
+*.res
+*.baml
+*.pdb
+*.suo
+*.user
+bin
+obj
