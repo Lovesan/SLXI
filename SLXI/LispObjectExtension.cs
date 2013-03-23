@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using SLXI.Exceptions;
-
 namespace SLXI
 {
     public static class LispObjectExtensions
@@ -31,6 +30,21 @@ namespace SLXI
         public static bool IsCons(this LispObject obj)
         {
             return obj is LispCons;
+        }
+
+        public static bool IsSymbol(this LispObject obj)
+        {
+            return obj is LispSymbol;
+        }
+
+        public static bool IsEnd(this LispObject obj, Func<LispException> exFactory)
+        {
+            return obj.AsList(exFactory).IsNil();
+        }
+
+        public static bool IsEnd(this LispObject obj)
+        {
+            return obj.IsEnd(CurrentExceptionFactory);
         }
         
         public static T As<T>(this LispObject obj, Func<LispException> exFactory)
@@ -253,6 +267,24 @@ namespace SLXI
         public static LispObject Rest(this LispObject obj)
         {
             return obj.Rest<LispObject>(CurrentExceptionFactory);
+        }
+
+        public static LispObject List(this IEnumerable<LispObject> list)
+        {
+            var i = list.GetEnumerator();
+            if (!i.MoveNext())
+                return LispSymbol.Nil;
+            var head = LispCons.Create(i.Current, LispSymbol.Nil);
+            if (!i.MoveNext())
+                return head;
+            var tail = head;
+            do
+            {
+                var tmp = LispCons.Create(i.Current, LispSymbol.Nil);
+                tail.Cdr = tmp;
+                tail = tmp;
+            } while (i.MoveNext());
+            return head;
         }
     }
 }

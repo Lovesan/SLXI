@@ -34,6 +34,8 @@ namespace SLXI
         public static readonly LispSymbol Declare;
         public static readonly LispSymbol Key;
         public static readonly LispSymbol Rest;
+        public static readonly LispSymbol Aux;
+        public static readonly LispSymbol AllowOtherKeys;
         public static readonly LispSymbol Slxi;
         public static readonly LispSymbol SlxiCurrentForm;
         public static readonly LispSymbol SlxiCurrentExceptionFactory;
@@ -73,6 +75,8 @@ namespace SLXI
             Declare = T.Intern("declare");
             Key = T.Intern("&key");
             Rest = T.Intern("&rest");
+            Aux = T.Intern("&aux");
+            AllowOtherKeys = T.Intern("&allow-other-keys");
             Slxi = T.Intern("slxi");
             SlxiCurrentForm = Slxi.Intern("*current-form*");
             SlxiCurrentExceptionFactory = Slxi.Intern("*current-exception-factory*");
