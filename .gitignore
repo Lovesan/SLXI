@@ -13,5 +13,4 @@
 *.pdb
 *.suo
 *.user
-bin
-obj
+Bin

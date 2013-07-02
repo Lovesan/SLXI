@@ -4,12 +4,12 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{5D6113C6-8314-4BB8-A2A4-1B3AB4565DCF}</ProjectGuid>
+    <ProjectGuid>{D119FF33-B2D8-47DA-8F48-58FBD0A31E93}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SLXI</RootNamespace>
     <AssemblyName>SLXI</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -17,7 +17,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\Bin\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -26,7 +26,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\Bin\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -34,6 +34,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -41,42 +42,54 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AST\LispBodyNode.cs" />
-    <Compile Include="AST\LispIfNode.cs" />
-    <Compile Include="AST\LispAstConverter.cs" />
-    <Compile Include="AST\LispAstNode.cs" />
-    <Compile Include="AST\LispConstantNode.cs" />
-    <Compile Include="AST\LispDRefNode.cs" />
-    <Compile Include="AST\LispFuncallNode.cs" />
-    <Compile Include="AST\LispGRefNode.cs" />
-    <Compile Include="LispInternalObject.cs" />
-    <Compile Include="AST\LispLambdaNode.cs" />
-    <Compile Include="AST\LispSRefNode.cs" />
-    <Compile Include="AST\LispRefNode.cs" />
-    <Compile Include="DelegateDisposable.cs" />
-    <Compile Include="Exceptions\LispConstantModificationException.cs" />
-    <Compile Include="Exceptions\LispRuntimeException.cs" />
-    <Compile Include="Exceptions\LispUnboundException.cs" />
-    <Compile Include="Exceptions\LispUnboundVariableException.cs" />
-    <Compile Include="LispObjectExtension.cs" />
-    <Compile Include="AST\LispURefNode.cs" />
-    <Compile Include="Exceptions\LispCompilerException.cs" />
-    <Compile Include="Exceptions\LispException.cs" />
-    <Compile Include="Exceptions\LispSyntaxException.cs" />
-    <Compile Include="LispChar.cs" />
-    <Compile Include="LispCons.cs" />
-    <Compile Include="LispDeclaration.cs" />
-    <Compile Include="LispFunction.cs" />
-    <Compile Include="LispRuntime.cs" />
-    <Compile Include="LispLexenv.cs" />
-    <Compile Include="LispVar.cs" />
+    <Compile Include="Compiler\LispDeclaration.cs" />
+    <Compile Include="Compiler\LispLexenv.cs" />
+    <Compile Include="Compiler\LispVar.cs" />
+    <Compile Include="Compiler\LispVariableDeclaration.cs" />
+    <Compile Include="Compiler\LispVarKind.cs" />
+    <Compile Include="LispConstantModificationException.cs" />
+    <Compile Include="LispConstraintException.cs" />
+    <Compile Include="LispDivisionByZeroException.cs" />
+    <Compile Include="LispException.cs" />
+    <Compile Include="LispInvalidOperationException.cs" />
     <Compile Include="LispObject.cs" />
-    <Compile Include="LispString.cs" />
-    <Compile Include="LispSymbol.cs" />
-    <Compile Include="LispVarKind.cs" />
-    <Compile Include="LispVector.cs" />
+    <Compile Include="LispObjectNotCharException.cs" />
+    <Compile Include="LispObjectNotConsException.cs" />
+    <Compile Include="LispObjectNotDoubleException.cs" />
+    <Compile Include="LispObjectNotFixnumException.cs" />
+    <Compile Include="LispObjectNotFloatException.cs" />
+    <Compile Include="LispObjectNotFloatingPointException.cs" />
+    <Compile Include="LispObjectNotIntegerException.cs" />
+    <Compile Include="LispObjectNotListException.cs" />
+    <Compile Include="LispObjectNotNumberException.cs" />
+    <Compile Include="LispObjectNotRationalException.cs" />
+    <Compile Include="LispObjectNotSequenceException.cs" />
+    <Compile Include="LispObjectNotStringException.cs" />
+    <Compile Include="LispObjectNotSymbolException.cs" />
+    <Compile Include="LispObjectNotVectorException.cs" />
+    <Compile Include="LispObjectType.cs" />
+    <Compile Include="LispRangeContraintException.cs" />
+    <Compile Include="LispSymbolUnboundException.cs" />
+    <Compile Include="LispTypeContraintException.cs" />
+    <Compile Include="LispUndefinedVariableDeclarationException.cs" />
+    <Compile Include="LispValues.cs" />
+    <Compile Include="LispVariableRedeclarationException.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Evaluator\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SLXI")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("SLXI, a cross interpreter")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("SLXI")]
-[assembly: AssemblyCopyright("Copyright ©  2013")]
+[assembly: AssemblyCopyright("Copyright ©  2013, Dmitry Ignatiev")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("8f401278-f652-4bb8-b5ed-ca8cb77cb96b")]
+[assembly: Guid("2f4bf4f1-fc53-4ed4-9721-83f241deadef")]
 
 // Version information for an assembly consists of the following four values:
 //
