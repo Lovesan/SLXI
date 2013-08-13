@@ -42,8 +42,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Compiler\LispAstNode.cs" />
+    <Compile Include="Compiler\LispAstTransformer.cs" />
+    <Compile Include="Compiler\LispBodyNode.cs" />
+    <Compile Include="Compiler\LispConstAstNode.cs" />
     <Compile Include="Compiler\LispDeclaration.cs" />
+    <Compile Include="Compiler\LispGRefAstNode.cs" />
     <Compile Include="Compiler\LispLexenv.cs" />
+    <Compile Include="Compiler\LispLRefAstNode.cs" />
+    <Compile Include="Compiler\LispUnwindProtectNode.cs" />
     <Compile Include="Compiler\LispVar.cs" />
     <Compile Include="Compiler\LispVariableDeclaration.cs" />
     <Compile Include="Compiler\LispVarKind.cs" />
@@ -70,6 +77,7 @@
     <Compile Include="LispObjectType.cs" />
     <Compile Include="LispRangeContraintException.cs" />
     <Compile Include="LispSymbolUnboundException.cs" />
+    <Compile Include="LispSyntaxException.cs" />
     <Compile Include="LispTypeContraintException.cs" />
     <Compile Include="LispUndefinedVariableDeclarationException.cs" />
     <Compile Include="LispValues.cs" />

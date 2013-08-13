@@ -88,6 +88,15 @@ namespace SLXI.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Invalid syntax.
+        /// </summary>
+        internal static string InvalidSyntaxException {
+            get {
+                return ResourceManager.GetString("InvalidSyntaxException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Nihil ex nihil.
         /// </summary>
         internal static string NilModificationException {

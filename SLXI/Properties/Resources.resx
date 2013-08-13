@@ -126,6 +126,9 @@
   <data name="InternalRuntimeError" xml:space="preserve">
     <value>Internal runtime error</value>
   </data>
+  <data name="InvalidSyntaxException" xml:space="preserve">
+    <value>Invalid syntax</value>
+  </data>
   <data name="NilModificationException" xml:space="preserve">
     <value>Nihil ex nihil</value>
   </data>

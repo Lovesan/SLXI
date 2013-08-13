@@ -2,7 +2,9 @@
 {
     public abstract class LispDeclaration
     {
-        public virtual void Apply(LispLexenv env)
-        { }
+        public virtual bool Validate(LispLexenv env)
+        {
+            return true;
+        }
     }
 }

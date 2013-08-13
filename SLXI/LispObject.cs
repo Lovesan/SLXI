@@ -222,6 +222,10 @@ namespace SLXI
             get { return NilSymbol; }
         }
 
+        public static readonly LispObject Quote;
+        public static readonly LispObject UnwindProtect;
+        public static readonly LispObject Body;
+
         static LispObject()
         {
             NilSymbol = new LispObject(LispObjectType.Symbol);
@@ -240,6 +244,9 @@ namespace SLXI
                     { T, new LispVar(T, LispVarKind.Constant) },
                     { Nil, new LispVar(Nil, LispVarKind.Constant) }
                 });
+            Quote = T.SymbolIntern("quote");
+            UnwindProtect = T.SymbolIntern("unwind-protect");
+            Body = T.SymbolIntern("body");
         }
 
         #endregion
@@ -852,6 +859,11 @@ namespace SLXI
             }
         }
 
+        public LispObject SymbolIntern(string name)
+        {
+            return SymbolIntern(CreateString(name));
+        }
+
         public bool SymbolUnintern()
         {
             CheckSymbol();
@@ -981,6 +993,17 @@ namespace SLXI
             return Vars[name] = new LispVar(name, kind);
         }
 
+        public LispVar SymbolVar
+        {
+            get
+            {
+                CheckSymbol();
+                LispVar var;
+                Vars.TryGetValue(this, out var);
+                return var;
+            }
+        }
+
         public bool SymbolUndefVar()
         {
             CheckSymbol();
@@ -1031,6 +1054,20 @@ namespace SLXI
             {
                 CheckList();
                 return IsNil;
+            }
+        }
+
+        public bool IsProperList
+        {
+            get
+            {
+                CheckList();
+                var l = this;
+                while (l.IsCons)
+                {
+                    l = l.Cdr;
+                }
+                return l.IsList;
             }
         }
 

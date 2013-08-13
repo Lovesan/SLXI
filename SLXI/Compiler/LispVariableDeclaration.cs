@@ -15,18 +15,9 @@ namespace SLXI.Compiler
             Kind = kind;
         }
 
-        public override void Apply(LispLexenv env)
+        public override bool Validate(LispLexenv env)
         {
-            if(Kind != LispVarKind.Dynamic && !env.Bindings.Contains(Name))
-                throw new LispUndefinedVariableDeclarationException(Name);
-            var varDecls = env.Decls.OfType<LispVariableDeclaration>();
-            foreach (var decl in varDecls.Where(decl => decl.Name.Eq(Name)))
-            {
-                if(decl.Kind != Kind)
-                    throw new LispVariableRedeclarationException(Name);
-                return;
-            }
-            env.Defvar(Name, Kind);
+            return true;
         }
     }
 }
