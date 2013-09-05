@@ -11,7 +11,8 @@
         Bignum,
         Float,
         Double,
-        Ratio,
+        RatioFixnum,
+        RatioInteger,
         Function
     }
 }

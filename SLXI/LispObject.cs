@@ -175,7 +175,32 @@ namespace SLXI
             }
         }
 
-        class RatioData
+        class RatioFixnumData
+        {
+            public int Numerator { get; set; }
+
+            public int Denominator { get; set; }
+
+
+            public override int GetHashCode()
+            {
+                return Numerator.GetHashCode() ^ Denominator.GetHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                var ratio = obj as RatioFixnumData;
+                if (ratio == null) return false;
+                return Equals(ratio);
+            }
+
+            public bool Equals(RatioFixnumData r)
+            {
+                return Numerator == r.Numerator && Denominator == r.Denominator;
+            }
+        }
+
+        class RatioIntegerData
         {
             public BigInteger Numerator { get; set; }
 
@@ -188,12 +213,12 @@ namespace SLXI
 
             public override bool Equals(object obj)
             {
-                var ratio = obj as RatioData;
+                var ratio = obj as RatioIntegerData;
                 if (ratio == null) return false;
                 return Equals(ratio);
             }
 
-            public bool Equals(RatioData r)
+            public bool Equals(RatioIntegerData r)
             {
                 return Numerator == r.Numerator && Denominator == r.Denominator;
             }
@@ -361,14 +386,19 @@ namespace SLXI
         {
             if (denom.IsZero)
                 throw new LispDivisionByZeroException(CreateInteger(num));
+            var sign = num.Sign * denom.Sign;
+            num = BigInteger.Abs(num);
+            denom = BigInteger.Abs(denom);
             var gcd = BigInteger.GreatestCommonDivisor(num, denom);
             num /= gcd;
             denom /= gcd;
             if (denom.IsOne)
-                return CreateInteger(num);
-            return num.IsZero
-                ? CreateInteger(0)
-                : new LispObject(LispObjectType.Ratio, new RatioData { Numerator = num, Denominator = denom });
+                return CreateInteger(num * sign);
+            if (num > int.MaxValue || num < int.MinValue || denom > int.MaxValue || denom < int.MinValue)
+                return new LispObject(LispObjectType.RatioInteger,
+                                      new RatioIntegerData { Numerator = num, Denominator = denom });
+            return new LispObject(LispObjectType.RatioFixnum,
+                                  new RatioFixnumData { Numerator = (int)num, Denominator = (int)denom });
         }
 
         #endregion
@@ -440,9 +470,19 @@ namespace SLXI
             get { return IsFixnum || IsBignum; }
         }
 
+        public bool IsRatioFixnum
+        {
+            get { return _type == LispObjectType.RatioFixnum; }
+        }
+
+        public bool IsRatioInteger
+        {
+            get { return _type == LispObjectType.RatioInteger; }
+        }
+
         public bool IsRatio
         {
-            get { return _type == LispObjectType.Ratio; }
+            get { return IsRatioFixnum || IsRatioInteger; }
         }
 
         public bool IsFloat
@@ -739,7 +779,22 @@ namespace SLXI
             get
             {
                 CheckRational();
-                return IsInteger ? GetData<BigInteger>() : GetData<RatioData>().Numerator;
+                if (IsInteger) return GetData<BigInteger>();
+                return IsRatioFixnum
+                    ? GetData<RatioFixnumData>().Numerator
+                    : GetData<RatioIntegerData>().Numerator;
+            }
+        }
+
+        public LispObject NumeratorValue
+        {
+            get
+            {
+                CheckRational();
+                if (IsInteger) return CreateInteger(GetData<BigInteger>());
+                return IsRatioFixnum
+                           ? CreateFixnum(GetData<RatioFixnumData>().Numerator)
+                           : CreateInteger(GetData<RatioIntegerData>().Numerator);
             }
         }
 
@@ -748,7 +803,22 @@ namespace SLXI
             get
             {
                 CheckRational();
-                return IsInteger ? 1 : GetData<RatioData>().Denominator;
+                if (IsInteger) return 1;
+                return IsRatioFixnum
+                    ? GetData<RatioFixnumData>().Denominator
+                    : GetData<RatioIntegerData>().Denominator;
+            }
+        }
+
+        public LispObject DenominatorValue
+        {
+            get
+            {
+                CheckRational();
+                if (IsInteger) return CreateInteger(1);
+                return IsRatioFixnum
+                           ? CreateFixnum(GetData<RatioFixnumData>().Denominator)
+                           : CreateInteger(GetData<RatioIntegerData>().Denominator);
             }
         }
 
@@ -1331,6 +1401,18 @@ namespace SLXI
                 return o.IsDouble && Math.Abs(DoubleValue - o.DoubleValue) < double.Epsilon;
             if (IsChar)
                 return o.IsChar && CharValue == o.CharValue;
+            if (IsRatioFixnum && o.IsRatioFixnum)
+            {
+                var data = GetData<RatioFixnumData>();
+                var oData = GetData<RatioFixnumData>();
+                return data.Numerator == oData.Numerator && data.Denominator == oData.Denominator;
+            }
+            if (IsRatioInteger && o.IsRatioInteger)
+            {
+                var data = GetData<RatioIntegerData>();
+                var oData = GetData<RatioIntegerData>();
+                return data.Numerator == oData.Numerator && data.Denominator == oData.Denominator;
+            }
             return false;
         }
 
@@ -1353,6 +1435,555 @@ namespace SLXI
             var objData = obj.GetData<object>();
             return data.Equals(objData);
         }
+
+        #endregion
+
+        #region Math
+
+        #region Basic arithmetics
+
+        public LispObject Add(LispObject x)
+        {
+            if (IsInteger)
+            {
+                var v = IsFixnum ? GetData<int>() : GetData<BigInteger>();
+                if (x.IsInteger) return Add(v, x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>());
+                if (x.IsFloat) return Add(v, x.GetData<float>());
+                if (x.IsDouble) return Add(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Add(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Add(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsFloat)
+            {
+                var v = GetData<float>();
+                if (x.IsInteger) return Add(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Add(v, x.GetData<float>());
+                if (x.IsDouble) return Add(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Add(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Add(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsDouble)
+            {
+                var v = GetData<double>();
+                if (x.IsInteger) return Add(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Add(x.GetData<float>(), v);
+                if (x.IsDouble) return Add(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Add(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Add(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsRatioFixnum)
+            {
+                var v = GetData<RatioFixnumData>();
+                if (x.IsInteger) return Add(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Add(x.GetData<float>(), v);
+                if (x.IsDouble) return Add(x.GetData<double>(), v);
+                if (x.IsRatioFixnum) return Add(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Add(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsRatioInteger)
+            {
+                var v = GetData<RatioIntegerData>();
+                if (x.IsInteger) return Add(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Add(x.GetData<float>(), v);
+                if (x.IsDouble) return Add(x.GetData<double>(), v);
+                if (x.IsRatioFixnum) return Add(x.GetData<RatioFixnumData>(), v);
+                if (x.IsRatioInteger) return Add(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            throw new LispObjectNotNumberException(this);
+        }
+
+        private static LispObject Add(BigInteger x, BigInteger y)
+        {
+            return CreateInteger(x + y);
+        }
+
+        private static LispObject Add(BigInteger x, float y)
+        {
+            return CreateFloat((float)x + y);
+        }
+
+        private static LispObject Add(BigInteger x, double y)
+        {
+            return CreateDouble((double)x + y);
+        }
+
+        private static LispObject Add(BigInteger x, RatioFixnumData y)
+        {
+            return CreateRatio(y.Numerator + x * y.Denominator, y.Denominator);
+        }
+
+        private static LispObject Add(BigInteger x, RatioIntegerData y)
+        {
+            return CreateRatio(y.Numerator + x * y.Denominator, y.Denominator);
+        }
+
+        private static LispObject Add(float x, float y)
+        {
+            return CreateFloat(x + y);
+        }
+
+        private static LispObject Add(float x, double y)
+        {
+            return CreateDouble(x + y);
+        }
+
+        private static LispObject Add(float x, RatioFixnumData y)
+        {
+            return CreateFloat((y.Numerator + x * y.Denominator) / y.Denominator);
+        }
+
+        private static LispObject Add(float x, RatioIntegerData y)
+        {
+            return CreateFloat(((float)y.Numerator + x * (float)y.Denominator) / (float)y.Denominator);
+        }
+
+        private static LispObject Add(double x, double y)
+        {
+            return CreateDouble(x + y);
+        }
+
+        private static LispObject Add(double x, RatioFixnumData y)
+        {
+            return CreateDouble((y.Numerator + x * y.Denominator) / y.Denominator);
+        }
+
+        private static LispObject Add(double x, RatioIntegerData y)
+        {
+            return CreateDouble(((double)y.Numerator + x * (double)y.Denominator) / (double)y.Denominator);
+        }
+
+        private static LispObject Add(RatioFixnumData x, RatioFixnumData y)
+        {
+            var d = x.Denominator * (BigInteger)y.Denominator;
+            return CreateRatio(x.Numerator * y.Denominator + y.Numerator * x.Denominator, d);
+        }
+
+        private static LispObject Add(RatioFixnumData x, RatioIntegerData y)
+        {
+            var d = x.Denominator * y.Denominator;
+            return CreateRatio(x.Numerator * y.Denominator + y.Numerator * x.Denominator, d);
+        }
+
+        private static LispObject Add(RatioIntegerData x, RatioIntegerData y)
+        {
+            var d = x.Denominator * y.Denominator;
+            return CreateRatio(x.Numerator * y.Denominator + y.Numerator * x.Denominator, d);
+        }
+
+        public LispObject Neg
+        {
+            get
+            {
+                if (IsFixnum) return CreateInteger(-GetData<int>());
+                if (IsInteger) return CreateInteger(-GetData<BigInteger>());
+                if (IsFloat) return CreateFloat(-GetData<float>());
+                if (IsDouble) return CreateDouble(-GetData<double>());
+                if (IsRatioFixnum)
+                {
+                    var r = GetData<RatioFixnumData>();
+                    return CreateRatio(-(BigInteger)r.Numerator, r.Denominator);
+                }
+                if (IsRatioInteger)
+                {
+                    var r = GetData<RatioIntegerData>();
+                    return CreateRatio(-r.Numerator, r.Denominator);
+                }
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public LispObject Sub(LispObject x)
+        {
+            return Add(x.Neg);
+        }
+
+        public LispObject Mul(LispObject x)
+        {
+            if (IsInteger)
+            {
+                var v = IsFixnum ? GetData<int>() : GetData<BigInteger>();
+                if (x.IsInteger) return Mul(v, x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>());
+                if (x.IsFloat) return Mul(v, x.GetData<float>());
+                if (x.IsDouble) return Mul(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Mul(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Mul(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsFloat)
+            {
+                var v = GetData<float>();
+                if (x.IsInteger) return Mul(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Mul(v, x.GetData<float>());
+                if (x.IsDouble) return Mul(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Mul(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Mul(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsDouble)
+            {
+                var v = GetData<double>();
+                if (x.IsInteger) return Mul(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Mul(x.GetData<float>(), v);
+                if (x.IsDouble) return Mul(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return Mul(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Mul(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsRatioFixnum)
+            {
+                var v = GetData<RatioFixnumData>();
+                if (x.IsInteger) return Mul(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Mul(x.GetData<float>(), v);
+                if (x.IsDouble) return Mul(x.GetData<double>(), v);
+                if (x.IsRatioFixnum) return Mul(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return Mul(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            if (IsRatioInteger)
+            {
+                var v = GetData<RatioIntegerData>();
+                if (x.IsInteger) return Mul(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v);
+                if (x.IsFloat) return Mul(x.GetData<float>(), v);
+                if (x.IsDouble) return Mul(x.GetData<double>(), v);
+                if (x.IsRatioFixnum) return Mul(x.GetData<RatioFixnumData>(), v);
+                if (x.IsRatioInteger) return Mul(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotNumberException(x);
+            }
+            throw new LispObjectNotNumberException(this);
+        }
+
+        private static LispObject Mul(BigInteger x, BigInteger y)
+        {
+            return CreateInteger(x * y);
+        }
+
+        private static LispObject Mul(BigInteger x, float y)
+        {
+            return CreateFloat((float)x * y);
+        }
+
+        private static LispObject Mul(BigInteger x, double y)
+        {
+            return CreateDouble((double)x * y);
+        }
+
+        private static LispObject Mul(BigInteger x, RatioFixnumData y)
+        {
+            return CreateRatio(x * y.Numerator, y.Denominator);
+        }
+
+        private static LispObject Mul(BigInteger x, RatioIntegerData y)
+        {
+            return CreateRatio(x * y.Numerator, y.Denominator);
+        }
+
+        private static LispObject Mul(float x, float y)
+        {
+            return CreateFloat(x * y);
+        }
+
+        private static LispObject Mul(float x, double y)
+        {
+            return CreateDouble(x * y);
+        }
+
+        private static LispObject Mul(float x, RatioFixnumData y)
+        {
+            return CreateFloat(y.Numerator / (float)y.Denominator * x);
+        }
+
+        private static LispObject Mul(float x, RatioIntegerData y)
+        {
+            return CreateFloat((float)y.Numerator / (float)y.Denominator * x);
+        }
+
+        private static LispObject Mul(double x, double y)
+        {
+            return CreateDouble(x * y);
+        }
+
+        private static LispObject Mul(double x, RatioFixnumData y)
+        {
+            return CreateDouble(y.Numerator / (double)y.Denominator * x);
+        }
+
+        private static LispObject Mul(double x, RatioIntegerData y)
+        {
+            return CreateDouble((double)y.Numerator / (double)y.Denominator * x);
+        }
+
+        private static LispObject Mul(RatioFixnumData x, RatioFixnumData y)
+        {
+            return CreateRatio(x.Numerator * (BigInteger)y.Numerator, x.Denominator * (BigInteger)x.Denominator);
+        }
+
+        private static LispObject Mul(RatioFixnumData x, RatioIntegerData y)
+        {
+            return CreateRatio(x.Numerator * y.Numerator, x.Denominator * y.Denominator);
+        }
+
+        private static LispObject Mul(RatioIntegerData x, RatioIntegerData y)
+        {
+            return CreateRatio(x.Numerator * y.Numerator, x.Denominator * y.Denominator);
+        }
+
+        public LispObject OneDivBy
+        {
+            get
+            {
+                if (IsFixnum) return CreateRatio(1, GetData<int>());
+                if (IsInteger) return CreateRatio(1, GetData<BigInteger>());
+                if (IsFloat) return CreateFloat(1 / GetData<float>());
+                if (IsDouble) return CreateDouble(1 / GetData<double>());
+                if (IsRatioFixnum)
+                {
+                    var r = GetData<RatioFixnumData>();
+                    return CreateRatio(r.Denominator, r.Numerator);
+                }
+                if (IsRatioInteger)
+                {
+                    var r = GetData<RatioIntegerData>();
+                    return CreateRatio(r.Denominator, r.Numerator);
+                }
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public LispObject Div(LispObject x)
+        {
+            return Mul(x.OneDivBy);
+        }
+
+        public int NumberCompare(LispObject x)
+        {
+            if (IsInteger)
+            {
+                var v = IsFixnum ? GetData<int>() : GetData<BigInteger>();
+                if (x.IsInteger) return NumberCompare(v, x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>());
+                if (x.IsFloat) return NumberCompare(v, x.GetData<float>());
+                if (x.IsDouble) return NumberCompare(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return NumberCompare(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return NumberCompare(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotRealException(x);
+            }
+            if (IsFloat)
+            {
+                var v = GetData<float>();
+                if (x.IsInteger) return NumberCompare(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v) * -1;
+                if (x.IsFloat) return NumberCompare(v, x.GetData<float>());
+                if (x.IsDouble) return NumberCompare(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return NumberCompare(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return NumberCompare(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotRealException(x);
+            }
+            if (IsDouble)
+            {
+                var v = GetData<double>();
+                if (x.IsInteger) return NumberCompare(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v) * -1;
+                if (x.IsFloat) return NumberCompare(x.GetData<float>(), v) * -1;
+                if (x.IsDouble) return NumberCompare(v, x.GetData<double>());
+                if (x.IsRatioFixnum) return NumberCompare(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return NumberCompare(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotRealException(x);
+            }
+            if (IsRatioFixnum)
+            {
+                var v = GetData<RatioFixnumData>();
+                if (x.IsInteger) return NumberCompare(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v) * -1;
+                if (x.IsFloat) return NumberCompare(x.GetData<float>(), v) * -1;
+                if (x.IsDouble) return NumberCompare(x.GetData<double>(), v) * -1;
+                if (x.IsRatioFixnum) return NumberCompare(v, x.GetData<RatioFixnumData>());
+                if (x.IsRatioInteger) return NumberCompare(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotRealException(x);
+            }
+            if (IsRatioInteger)
+            {
+                var v = GetData<RatioIntegerData>();
+                if (x.IsInteger) return NumberCompare(x.IsFixnum ? x.GetData<int>() : x.GetData<BigInteger>(), v) * -1;
+                if (x.IsFloat) return NumberCompare(x.GetData<float>(), v) * -1;
+                if (x.IsDouble) return NumberCompare(x.GetData<double>(), v) * -1;
+                if (x.IsRatioFixnum) return NumberCompare(x.GetData<RatioFixnumData>(), v) * -1;
+                if (x.IsRatioInteger) return NumberCompare(v, x.GetData<RatioIntegerData>());
+                throw new LispObjectNotRealException(x);
+            }
+            throw new LispObjectNotRealException(this);
+        }
+
+        private static int NumberCompare(BigInteger x, BigInteger y)
+        {
+            return x.CompareTo(y);
+        }
+
+        private static int NumberCompare(BigInteger x, float y)
+        {
+            return ((float)x).CompareTo(y);
+        }
+
+        private static int NumberCompare(BigInteger x, double y)
+        {
+            return ((double)x).CompareTo(y);
+        }
+
+        private static int NumberCompare(BigInteger x, RatioFixnumData y)
+        {
+            return (x * y.Denominator).CompareTo(y.Numerator);
+        }
+
+        private static int NumberCompare(BigInteger x, RatioIntegerData y)
+        {
+            return (x * y.Denominator).CompareTo(y.Numerator);
+        }
+
+        private static int NumberCompare(float x, float y)
+        {
+            return x.CompareTo(y);
+        }
+
+        private static int NumberCompare(float x, double y)
+        {
+            return ((double)x).CompareTo(y);
+        }
+
+        private static int NumberCompare(float x, RatioFixnumData y)
+        {
+            return x.CompareTo(y.Numerator / (float)y.Denominator);
+        }
+
+        private static int NumberCompare(float x, RatioIntegerData y)
+        {
+            return x.CompareTo((float)y.Numerator / (float)y.Denominator);
+        }
+
+        private static int NumberCompare(double x, double y)
+        {
+            return x.CompareTo(y);
+        }
+
+        private static int NumberCompare(double x, RatioFixnumData y)
+        {
+            return x.CompareTo(y.Numerator / (double)y.Denominator);
+        }
+
+        private static int NumberCompare(double x, RatioIntegerData y)
+        {
+            return x.CompareTo((double)y.Numerator / (double)y.Denominator);
+        }
+
+        private static int NumberCompare(RatioFixnumData x, RatioFixnumData y)
+        {
+            return (x.Numerator * (BigInteger)y.Denominator).CompareTo(y.Numerator * (BigInteger)x.Denominator);
+        }
+
+        private static int NumberCompare(RatioFixnumData x, RatioIntegerData y)
+        {
+            return (x.Numerator * y.Denominator).CompareTo(y.Numerator * x.Denominator);
+        }
+
+        private static int NumberCompare(RatioIntegerData x, RatioIntegerData y)
+        {
+            return (x.Numerator * y.Denominator).CompareTo(y.Numerator * x.Denominator);
+        }
+
+        public bool NumberEq(LispObject x)
+        {
+            return NumberCompare(x) == 0;
+        }
+
+        public bool NumberGt(LispObject x)
+        {
+            return NumberCompare(x) > 0;
+        }
+
+        public bool NumberGte(LispObject x)
+        {
+            return NumberCompare(x) >= 0;
+        }
+
+        public bool NumberLt(LispObject x)
+        {
+            return NumberCompare(x) < 0;
+        }
+
+        public bool NumberLte(LispObject x)
+        {
+            return NumberCompare(x) <= 0;
+        }
+
+        public LispObject Abs
+        {
+            get
+            {
+                if (IsFixnum) return CreateInteger(Math.Abs(GetData<int>()));
+                if (IsInteger) return CreateInteger(BigInteger.Abs(GetData<BigInteger>()));
+                if (IsFloat) return CreateFloat(Math.Abs(GetData<float>()));
+                if (IsDouble) return CreateDouble(Math.Abs(GetData<double>()));
+                if (IsRatioFixnum)
+                {
+                    var d = GetData<RatioFixnumData>();
+                    return CreateRatio(BigInteger.Abs(d.Numerator), d.Denominator);
+                }
+                if (IsRatioFixnum)
+                {
+                    var d = GetData<RatioIntegerData>();
+                    return CreateRatio(BigInteger.Abs(d.Numerator), d.Denominator);
+                }
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public bool IsPositive
+        {
+            get
+            {
+                if (IsFixnum) return GetData<int>() > 0;
+                if (IsInteger) return GetData<BigInteger>() > 0;
+                if (IsFloat) return GetData<float>() > 0.0f;
+                if (IsDouble) return GetData<double>() > 0.0;
+                if (IsRatioFixnum) return GetData<RatioFixnumData>().Numerator > 0;
+                if (IsRatioInteger) return GetData<RatioIntegerData>().Numerator > 0;
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public bool IsNegative
+        {
+            get
+            {
+                if (IsFixnum) return GetData<int>() < 0;
+                if (IsInteger) return GetData<BigInteger>() < 0;
+                if (IsFloat) return GetData<float>() < 0.0f;
+                if (IsDouble) return GetData<double>() < 0.0;
+                if (IsRatioFixnum) return GetData<RatioFixnumData>().Numerator < 0;
+                if (IsRatioInteger) return GetData<RatioIntegerData>().Numerator < 0;
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public bool IsZero
+        {
+            get
+            {
+                if (IsFixnum) return GetData<int>() == 0;
+                if (IsInteger) return GetData<BigInteger>() == 0;
+                if (IsFloat) return GetData<float>() - 0.0f < float.Epsilon;
+                if (IsDouble) return GetData<double>() - 0.0 < double.Epsilon;
+                if (IsRatioFixnum || IsRatioInteger)
+                    return false;
+                throw new LispObjectNotNumberException(this);
+            }
+        }
+
+        public int Sig
+        {
+            get { return NumberCompare(CreateFixnum(0)); }
+        }
+
+        #endregion
 
         #endregion
     }

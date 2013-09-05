@@ -70,6 +70,7 @@
     <Compile Include="LispObjectNotListException.cs" />
     <Compile Include="LispObjectNotNumberException.cs" />
     <Compile Include="LispObjectNotRationalException.cs" />
+    <Compile Include="LispObjectNotRealException.cs" />
     <Compile Include="LispObjectNotSequenceException.cs" />
     <Compile Include="LispObjectNotStringException.cs" />
     <Compile Include="LispObjectNotSymbolException.cs" />

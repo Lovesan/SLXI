@@ -165,6 +165,9 @@
   <data name="NotRationalException" xml:space="preserve">
     <value>Object is not a rational number</value>
   </data>
+  <data name="NotRealException" xml:space="preserve">
+    <value>Object is not a real</value>
+  </data>
   <data name="NotSequenceException" xml:space="preserve">
     <value>Object is not a sequence</value>
   </data>

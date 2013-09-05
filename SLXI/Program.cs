@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 
 namespace SLXI
 {
@@ -6,7 +7,6 @@ namespace SLXI
     {
         static void Main(string[] args)
         {
-            WriteError("Hello");
             Pause();
         }
 
