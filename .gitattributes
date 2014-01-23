@@ -1,5 +1,0 @@
-*.sln -crlf -diff
-*.csproj -crlf -diff
-*.snk -crlf -diff
-*.pfx -crlf -diff
-*.ico -crlf -diff

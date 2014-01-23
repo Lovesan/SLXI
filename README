@@ -1,3 +1,4 @@
-SLXI is a cross interpreter for a Lisp dialect based on CL.
-'XI' obviously stands for 'Cross Interpreter'.
-'SI'? Well... Standard Lisp? Super Lisp? Dunno.
+SL Cross Intepreter
+
+To compile and load everything,
+  evaluate `(load "load.lisp")` inside your CL implementation
