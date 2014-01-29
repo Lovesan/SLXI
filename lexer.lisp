@@ -8,7 +8,7 @@
             (:constructor %make-lexer)
             (:conc-name #:lex-))
   (input *standard-input* :type stream)
-  (filename (mkstring '*standard-output*)
+  (filename (mkstring '*standard-input*)
    :type simple-char-string)
   (line 1 :type index)
   (column 1 :type index)

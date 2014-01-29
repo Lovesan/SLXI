@@ -443,7 +443,9 @@ Vector -> CLOSE
             (:constructor %make-sl-reader)
             (:conc-name #:sl-reader-))
   (lexer (%make-lexer) :type lexer)
-  (token (make-token) :type token))
+  (token (make-token) :type token)
+  (close-p nil :type boolean)
+  (start-p t :type boolean))
 
 (defun sl-reader-next-token (reader)
   (declare (type sl-reader reader))
@@ -527,7 +529,7 @@ Vector -> CLOSE
       (:dot (make-sl-pr* reader "Invalid dot context." token t))
       (:close (make-sl-pr* reader "Unmatched close paren." token t))
       ((:number :char :symbol) (make-sl-pr* reader (tok-value token)))
-      (:string (make-sl-pr* reader (tok-value token)))
+      (:string (make-sl-pr* reader (tok-string token)))
       ((:quote :backquote :unquote :unquote-list :unquote-splice)
        (sl-reader-next-token reader)
        (let ((expr (sl-parse-expr reader)))
@@ -559,3 +561,43 @@ Vector -> CLOSE
            (make-sl-pr reader
                        (sl-pr-value exprs)
                        token)))))))
+
+(defun make-sl-reader (input &key (tab-size 8)
+                                  (external-format :default)
+                                  (filename (string '*standard-input*)))
+  (declare (type (or stream pathname string) input)
+           (type (member 2 4 8) tab-size))
+  (if (streamp input)
+    (%make-sl-reader :lexer (%make-lexer :input input
+                                         :tab-size tab-size
+                                         :filename filename))
+    (let ((in (open input :element-type 'character
+                          :external-format external-format)))
+      (%make-sl-reader :lexer (%make-lexer
+                               :input in
+                               :tab-size  tab-size
+                               :filename (namestring (pathname in)))
+                       :close-p t))))
+
+(defun close-reader (reader)
+  (declare (type sl-reader reader))
+  (when (sl-reader-close-p reader)
+    (close (lex-input (sl-reader-lexer reader)))))
+
+(defmacro with-sl-reader ((var input &rest args) &body body)
+  `(let ((,var (make-sl-reader ,input ,@args)))
+     (unwind-protect
+          (progn ,@body)
+       (close-reader ,var))))
+
+(defun sl-read-object (reader)
+  (declare (type (or sl-reader string) reader))
+  (if (stringp reader)
+    (with-input-from-string (in reader)
+      (with-sl-reader (r in :filename "string")
+        (sl-reader-next-token r)
+        (sl-parse-expr r)))
+    (progn (when (sl-reader-start-p reader)
+             (sl-reader-next-token reader)
+             (setf (sl-reader-start-p reader) nil))
+           (sl-parse-expr reader))))
