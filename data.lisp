@@ -104,6 +104,11 @@
   (or (consp x)
       (eq x +nil+)))
 
+(defun sl-proper-list-p (x)
+  (or (eq x +nil+)
+      (and (consp x)
+           (sl-proper-list-p (cdr x)))))
+
 (defun sl-endp (list)
   (cond ((eq list +nil+) t)
         ((consp list) nil)

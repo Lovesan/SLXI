@@ -12,6 +12,7 @@
   (dolist (file '("package.lisp"
                   "utils.lisp"
                   "data.lisp"
+                  "ast.lisp"
                   "lexer.lisp"
                   "reader.lisp"
                   ))
